@@ -1,0 +1,3 @@
+[submodule "libraries/OverAnimate"]
+	path = libraries/OverAnimate
+	url = https://github.com/nevyn/OverAnimate
