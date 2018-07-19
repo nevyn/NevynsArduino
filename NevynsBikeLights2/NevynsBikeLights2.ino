@@ -148,9 +148,20 @@ void handleState()
 //// Output
 //////////////////////////////////////////////////////
 
-void BlinkFunc(Animation *self, int direction, float t)
+void BlinkFunc(Animation *self, int direction, float f)
 {
-
+  Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
+  for(int l = 0; l < 2; l++) {
+    Adafruit_NeoPixel *led = leds[l];
+    int yellow = led->Color(255, 255, 0);
+    int black = led->Color(0, 0, 0);
+    
+    int beginAtIndex = direction>0 ? 0 : led->numPixels();
+    int litIndex = beginAtIndex + f*direction*led->numPixels();
+    for(int p = 0; p < led->numPixels(); p++) {
+      led->setPixelColor(p, p == litIndex ? yellow : black);
+    }
+  }
 }
 
 void ShineFunc(Animation *self, int _, float t)
