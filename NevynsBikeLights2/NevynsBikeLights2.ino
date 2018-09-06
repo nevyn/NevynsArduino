@@ -102,7 +102,9 @@ void handleButtons()
     state = BlinkLeft;
   } else if(buttonRight.isPressed()) {
     state = BlinkRight;
-  } else if(!kBlinkerButtonsAreSticky || buttonStopBlinking.isPressed()) {
+  } else if((state == BlinkLeft || state == BlinkRight) && 
+    (kBlinkerButtonsAreSticky || buttonStopBlinking.isPressed()
+  )) {
     state = shineForward ? ShineStraight : NoLight;
   }
 
@@ -141,7 +143,7 @@ void handleState()
     currentAnimation->duration = 1.0;
     currentAnimation->repeats = true;
     anims.addAnimation(currentAnimation);
-    for(int i = BlinkLeft; i < StateCount; i++) {
+    for(int i = 0; i < StateCount; i++) {
       if(stateMap[i] != currentAnimation) {
         anims.removeAnimation(stateMap[i]);
       }
@@ -162,11 +164,17 @@ void BlinkFunc(Animation *self, int direction, float f)
     Adafruit_NeoPixel *led = leds[l];
     int yellow = led->Color(255, 255, 0);
     int black = led->Color(0, 0, 0);
+    int white = l == 0 ? led->Color(255, 255, 255) : led->Color(255, 0, 0);
     
     int beginAtIndex = direction>0 ? 0 : led->numPixels();
     int litIndex = beginAtIndex + f*direction*led->numPixels();
+    int headlightIndex = shineForward ? led->numPixels()/2 : -1;
     for(int p = 0; p < led->numPixels(); p++) {
-      led->setPixelColor(p, p == litIndex ? yellow : black);
+      led->setPixelColor(p, 
+        p == headlightIndex ? white :
+        p == litIndex ? yellow :
+        black
+       );
     }
   }
 }
@@ -186,7 +194,6 @@ void ShineFunc(Animation *self, int _, float t)
 void BlackFunc(Animation *self, int _, float t)
 {
   for(int i = 0; i < frontLeds.numPixels(); i++) {
-    int c = (i%2==0)?255:128;
     frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
   }
 
