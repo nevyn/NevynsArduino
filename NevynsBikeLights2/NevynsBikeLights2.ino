@@ -45,6 +45,9 @@ BoundFunctionAnimation blinkLeft(BlinkFunc, -1);
 BoundFunctionAnimation blinkRight(BlinkFunc, 1);
 void ShineFunc(Animation *self, int _, float t);
 BoundFunctionAnimation shine(ShineFunc, 0);
+void BlackFunc(Animation *self, int _, float t);
+BoundFunctionAnimation black(BlackFunc, 0);
+
 
 Button buttonLeft = Button(7, PULLUP); // blink left
 Button buttonRight = Button(8, PULLUP); // blink right
@@ -124,7 +127,7 @@ void setHeadlight(bool headlight)
 //////////////////////////////////////////////////////
 
 Animation *stateMap[] = {
-  [NoLight] = NULL,
+  [NoLight] = &black,
   [BlinkLeft] = &blinkLeft,
   [BlinkRight] = &blinkRight,
   [ShineStraight] = &shine
@@ -177,6 +180,18 @@ void ShineFunc(Animation *self, int _, float t)
 
   for(int i = 0; i < rearLeds.numPixels(); i++) {
     rearLeds.setPixelColor(i, frontLeds.Color((i%2==0)?255:128, 0, 0));
+  }
+}
+
+void BlackFunc(Animation *self, int _, float t)
+{
+  for(int i = 0; i < frontLeds.numPixels(); i++) {
+    int c = (i%2==0)?255:128;
+    frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
+  }
+
+  for(int i = 0; i < rearLeds.numPixels(); i++) {
+    rearLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
   }
 }
 
