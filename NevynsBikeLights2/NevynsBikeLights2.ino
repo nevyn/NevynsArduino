@@ -164,7 +164,7 @@ void BlinkFunc(Animation *self, int direction, float f)
     Adafruit_NeoPixel *led = leds[l];
     int yellow = led->Color(255, 255, 0);
     int black = led->Color(0, 0, 0);
-    int white = l == 0 ? led->Color(255, 255, 255) : led->Color(255, 0, 0);
+    int white = (l == 0) ? led->Color(255, 255, 255) : led->Color(255, 16, 0);
     
     int beginAtIndex = direction>0 ? 0 : led->numPixels();
     int litIndex = beginAtIndex + f*direction*led->numPixels();
