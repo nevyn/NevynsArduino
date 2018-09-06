@@ -56,15 +56,19 @@ Button buttonFront = Button(10, PULLUP);  // toggle headlight
 //////////////////////////////////////////////////////
 
 int RXLED = 17;
-int BOARDLED = 13;
 void setup()
 {
-  pinMode(BOARDLED, OUTPUT); // used to show if headlight is on
-  pinMode(RXLED, OUTPUT); // used to show if headlight is on
+  pinMode(LED_BUILTIN, OUTPUT); // used to show if headlight is on
+  pinMode(RXLED, OUTPUT); // used to show if headlight is ons
   frontLeds.begin();
   frontLeds.show();
   rearLeds.begin();
-  rearLeds.begin();
+  rearLeds.show();
+
+  // hello!
+  setHeadlight(true); delay(100); setHeadlight(false);
+  bootBlink();
+  setHeadlight(true); delay(100); setHeadlight(false);
 }
 
 unsigned long lastMillis;
@@ -107,16 +111,16 @@ void handleButtons()
 
 void setHeadlight(bool headlight)
 {
-  shineForward = !shineForward;
-  digitalWrite(BOARDLED, shineForward); // status led on board
-  digitalWrite(RXLED, shineForward); // for boards that don't have a status led, use rx led
+  shineForward = headlight;
+  digitalWrite(LED_BUILTIN, shineForward?HIGH:LOW); // status led on board
+  digitalWrite(RXLED, shineForward?LOW:HIGH); // for boards that don't have a status led, use rx led. it's pulldown.
   if(state != BlinkLeft && state != BlinkRight) {
     state = shineForward ? ShineStraight : NoLight;
   }
 }
 
 //////////////////////////////////////////////////////
-//// Output
+//// State
 //////////////////////////////////////////////////////
 
 Animation *stateMap[] = {
@@ -129,7 +133,7 @@ Animation *stateMap[] = {
 void handleState()
 {
   Animation *currentAnimation = stateMap[state];
-  if(!currentAnimation->scheduled) {
+  if(currentAnimation && !currentAnimation->scheduled) {
     currentAnimation->beginTime = anims.now();
     currentAnimation->duration = 1.0;
     currentAnimation->repeats = true;
@@ -176,3 +180,41 @@ void ShineFunc(Animation *self, int _, float t)
   }
 }
 
+void bootBlink()
+{
+  rainbow(&frontLeds, 10);
+  rainbow(&rearLeds, 10);
+}
+
+void rainbow(Adafruit_NeoPixel *strip, uint8_t wait) {
+  uint16_t i, j;
+
+  for(j=0; j<64; j++) {
+    for(i=0; i<strip->numPixels(); i++) {
+      strip->setPixelColor(i, Wheel(strip, (i+j) & 255));
+    }
+    strip->show();
+    delay(wait);
+  }
+
+  // reset afterwards
+  for(i=0; i<strip->numPixels(); i++) {
+    strip->setPixelColor(i, 0);
+  }
+  strip->show();
+}
+
+// Input a value 0 to 255 to get a color value.
+// The colours are a transition r - g - b - back to r.
+uint32_t Wheel(Adafruit_NeoPixel *strip, byte WheelPos) {
+  WheelPos = 255 - WheelPos;
+  if(WheelPos < 85) {
+    return strip->Color(255 - WheelPos * 3, 0, WheelPos * 3);
+  }
+  if(WheelPos < 170) {
+    WheelPos -= 85;
+    return strip->Color(0, WheelPos * 3, 255 - WheelPos * 3);
+  }
+  WheelPos -= 170;
+  return strip->Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+}
