@@ -9,6 +9,19 @@ animations.
 
 ![wires](wires.png)
 
+Need to update this diagram because it's mostly wrong :P Changes:
+
+* Buttons go to ground, not 5v
+* there is no center button
+* buttons go to 7, 8, 9, 10 (left, right, down, up)
+* Front LEDs are on pin 5
+* Rear LEDS are on pin 6
+* Lights go through 5v, not Vin
+* there's about 500ohm resistor between lights and their data pins (5 and 6)
+
+Haven't decided how to power this yet... Plan 1 is a 9v rechargeable battery. Plan 2 is a very
+small motorcycle battery.
+
 ### Buttons
 
 Voxar's buttons have these wires:
