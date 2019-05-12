@@ -62,7 +62,14 @@ int RXLED = 17;
 void setup()
 {
   pinMode(LED_BUILTIN, OUTPUT); // used to show if headlight is on
-  pinMode(RXLED, OUTPUT); // used to show if headlight is ons
+  pinMode(RXLED, OUTPUT); // used to show if headlight is on
+
+  // set buttons to use internal pullup so they can be connected between signal pin and GND
+  // https://www.arduino.cc/en/Tutorial/InputPullupSerial
+  for(int i = 8; i < 14; i++) {
+    pinMode (i, INPUT_PULLUP);
+  }
+  
   frontLeds.begin();
   frontLeds.show();
   rearLeds.begin();
