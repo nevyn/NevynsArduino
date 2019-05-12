@@ -166,6 +166,10 @@ void handleState()
 
 void BlinkFunc(Animation *self, int direction, float f)
 {
+  for(int i = 0; i < frontLeds.numPixels(); i++) {
+      frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
+  }
+  
   Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
   for(int l = 0; l < 2; l++) {
     Adafruit_NeoPixel *led = leds[l];
@@ -173,13 +177,13 @@ void BlinkFunc(Animation *self, int direction, float f)
     int black = led->Color(0, 0, 0);
     int white = (l == 0) ? led->Color(255, 255, 255) : led->Color(255, 16, 0);
     
-    int beginAtIndex = direction>0 ? 0 : led->numPixels();
-    int litIndex = beginAtIndex + f*direction*led->numPixels();
-    int headlightIndex = shineForward ? led->numPixels()/2 : -1;
+    int beginAtIndex = led->numPixels()/2;
+    int litIndex = beginAtIndex + f*direction*led->numPixels()/2;
+    int headlightIndex = shineForward ? led->numPixels()/2 : -2;
     for(int p = 0; p < led->numPixels(); p++) {
       led->setPixelColor(p, 
-        p == headlightIndex ? white :
-        p == litIndex ? yellow :
+        (p == headlightIndex-1 || (p == headlightIndex+0) || (p == headlightIndex+1)) ? white :
+        (p == litIndex-1 || p == litIndex || p == litIndex+1) ? yellow :
         black
        );
     }
@@ -189,6 +193,10 @@ void BlinkFunc(Animation *self, int direction, float f)
 void ShineFunc(Animation *self, int _, float t)
 {
   for(int i = 0; i < frontLeds.numPixels(); i++) {
+    frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
+  }
+  
+  for(int i = frontLeds.numPixels()/3; i < frontLeds.numPixels()/3*2; i++) {
     int c = (i%2==0)?255:128;
     frontLeds.setPixelColor(i, frontLeds.Color(c, c, c));
   }
