@@ -5,10 +5,10 @@
 //////////////////////////////////////////////////////
 //// Settings
 //////////////////////////////////////////////////////
-static const int numberOfFrontLeds = 8;
+static const int numberOfFrontLeds = 44;
 static const int numberOfRearLeds = 8;
-static const int frontPin = 5;
-static const int rearPin = 6;
+static const int frontPin = 6;
+static const int rearPin = 5;
 // You can also change the pins for the buttons down under `buttonLeft` etc
 
 // If true: left and right are implemented as a on-off-on rocker switch
@@ -49,9 +49,9 @@ void BlackFunc(Animation *self, int _, float t);
 BoundFunctionAnimation black(BlackFunc, 0);
 
 
-Button buttonLeft = Button(7, PULLUP); // blink left
-Button buttonRight = Button(8, PULLUP); // blink right
-Button buttonStopBlinking = Button(9, PULLUP); // stop blinking
+Button buttonLeft = Button(9, PULLUP); // blink left
+Button buttonRight = Button(11, PULLUP); // blink right
+Button buttonStopBlinking = Button(8, PULLUP); // stop blinking
 Button buttonFront = Button(10, PULLUP);  // toggle headlight
 
 //////////////////////////////////////////////////////
