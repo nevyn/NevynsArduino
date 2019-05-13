@@ -47,6 +47,11 @@ Button buttonRight = Button(11, PULLUP); // blink right
 Button buttonStopBlinking = Button(8, PULLUP); // stop blinking
 Button buttonFront = Button(10, PULLUP);  // toggle headlight
 
+template <typename T> T clamp(T value, T low, T high)
+{
+    return (value < low) ? low : ((value > high) ? high : value);
+}
+
 //////////////////////////////////////////////////////
 //// Setup and run
 //////////////////////////////////////////////////////
@@ -111,11 +116,15 @@ void handleButtons()
   // Blinker buttons
   if(buttonLeft.isPressed()){
     blinkLeft.enabled = true;
-    blinkLeft.beginTime = sys.now();
+    if(buttonLeft.uniquePress()) {
+      blinkLeft.beginTime = sys.now();
+    }
     blinkRight.enabled = false;
   } else if(buttonRight.isPressed()) {
     blinkRight.enabled = true;
-    blinkRight.beginTime = sys.now();
+    if(buttonRight.uniquePress()) {
+      blinkRight.beginTime = sys.now();
+    }
     blinkLeft.enabled = false;
   } else if((blinkLeft.enabled || blinkRight.enabled) && 
     (kBlinkerButtonsAreSticky || buttonStopBlinking.isPressed()
@@ -155,20 +164,24 @@ void BlinkFunc(Animation *self, int direction, float f)
 
 void ShineFunc(Animation *self, int _, float t)
 {
-  for(int i = frontLeds.numPixels()/3; i < frontLeds.numPixels()/3*2; i++) {
-    int c = (i%2==0)?255:128;
-    frontLeds.setPixelColor(i, frontLeds.Color(c, c, c));
-  }
-
-  for(int i = 0; i < rearLeds.numPixels(); i++) {
-    rearLeds.setPixelColor(i, frontLeds.Color((i%2==0)?255:128, 0, 0));
+  Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
+  for(int l = 0; l < 2; l++) {
+    Adafruit_NeoPixel *led = leds[l];
+    int mid = led->numPixels()/2;
+    for(int i = 0; i < led->numPixels(); i++) {
+      int distance = abs(mid - i);
+      int range = 10;
+      int strength = clamp((range-distance)*(255/range), 0, 255);
+      led->setPixelColor(i, led->Color(strength, l==0?strength:0, l==0?strength:0));
+    }
   }
 }
 
 void BlackFunc(Animation *self, int _, float t)
 {
   for(int i = 0; i < frontLeds.numPixels(); i++) {
-    frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
+    int c = 0; //a(255/frontLeds.numPixels())*i;
+    frontLeds.setPixelColor(i, frontLeds.Color(c, c, c));
   }
 
   for(int i = 0; i < rearLeds.numPixels(); i++) {
