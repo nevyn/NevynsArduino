@@ -20,23 +20,8 @@ static const bool kBlinkerButtonsAreSticky = false;
 //// Global app state
 //////////////////////////////////////////////////////
 
-// Is the "headlamp" mode on? That is, after we stop blinking,
-// should we return to NoLight or ShineStraight?
-bool shineForward = false;
 
-// What state is this app currently in?
-enum {
- NoLight,
- BlinkLeft,
- BlinkRight,
- ShineStraight,
-
- StateCount
-} state;
-
-/// ----
-
-AnimationSystem anims;
+AnimationSystem sys;
 Adafruit_NeoPixel frontLeds = Adafruit_NeoPixel(numberOfFrontLeds, frontPin, NEO_GRB + NEO_KHZ800);
 Adafruit_NeoPixel rearLeds = Adafruit_NeoPixel(numberOfRearLeds, rearPin, NEO_GRB + NEO_KHZ800);
 
@@ -47,6 +32,14 @@ void ShineFunc(Animation *self, int _, float t);
 BoundFunctionAnimation shine(ShineFunc, 0);
 void BlackFunc(Animation *self, int _, float t);
 BoundFunctionAnimation black(BlackFunc, 0);
+
+BoundFunctionAnimation *anims[] = {
+  &black,
+  &shine,
+  &blinkLeft,
+  &blinkRight
+};
+static const int animCount = 4;
 
 
 Button buttonLeft = Button(9, PULLUP); // blink left
@@ -75,10 +68,19 @@ void setup()
   rearLeds.begin();
   rearLeds.show();
 
+  for(int i = 0; i < animCount; i++) {
+    BoundFunctionAnimation *anim = anims[i];
+    anim->beginTime = sys.now();
+    anim->duration = 1.0;
+    anim->repeats = true;
+    anim->enabled = false;
+    sys.addAnimation(anim);
+  }
+  // this one clears out the background every frame
+  black.enabled = true;
+  
   // hello!
-  setHeadlight(true); delay(100); setHeadlight(false);
   bootBlink();
-  setHeadlight(true); delay(100); setHeadlight(false);
 }
 
 unsigned long lastMillis;
@@ -94,8 +96,10 @@ void loop()
   TimeInterval delta = diff/1000.0;
   
   handleButtons();
-  handleState();
-  anims.playElapsedTime(delta);
+  sys.playElapsedTime(delta);
+
+  frontLeds.show();
+  rearLeds.show();
 }
 
 //////////////////////////////////////////////////////
@@ -106,58 +110,25 @@ void handleButtons()
 {
   // Blinker buttons
   if(buttonLeft.isPressed()){
-    state = BlinkLeft;
+    blinkLeft.enabled = true;
+    blinkLeft.beginTime = sys.now();
+    blinkRight.enabled = false;
   } else if(buttonRight.isPressed()) {
-    state = BlinkRight;
-  } else if((state == BlinkLeft || state == BlinkRight) && 
+    blinkRight.enabled = true;
+    blinkRight.beginTime = sys.now();
+    blinkLeft.enabled = false;
+  } else if((blinkLeft.enabled || blinkRight.enabled) && 
     (kBlinkerButtonsAreSticky || buttonStopBlinking.isPressed()
   )) {
-    state = shineForward ? ShineStraight : NoLight;
+    blinkRight.enabled = false;
+    blinkLeft.enabled = false;
   }
 
   // Headlight toggle button
   if(buttonFront.uniquePress()) {
-    setHeadlight(!shineForward);
+    shine.enabled = !shine.enabled;
+    shine.beginTime = sys.now();
   }
-}
-
-void setHeadlight(bool headlight)
-{
-  shineForward = headlight;
-  digitalWrite(LED_BUILTIN, shineForward?HIGH:LOW); // status led on board
-  digitalWrite(RXLED, shineForward?LOW:HIGH); // for boards that don't have a status led, use rx led. it's pulldown.
-  if(state != BlinkLeft && state != BlinkRight) {
-    state = shineForward ? ShineStraight : NoLight;
-  }
-}
-
-//////////////////////////////////////////////////////
-//// State
-//////////////////////////////////////////////////////
-
-Animation *stateMap[] = {
-  [NoLight] = &black,
-  [BlinkLeft] = &blinkLeft,
-  [BlinkRight] = &blinkRight,
-  [ShineStraight] = &shine
-};
-
-void handleState()
-{
-  Animation *currentAnimation = stateMap[state];
-  if(currentAnimation && !currentAnimation->scheduled) {
-    currentAnimation->beginTime = anims.now();
-    currentAnimation->duration = 1.0;
-    currentAnimation->repeats = true;
-    anims.addAnimation(currentAnimation);
-    for(int i = 0; i < StateCount; i++) {
-      if(stateMap[i] != currentAnimation) {
-        anims.removeAnimation(stateMap[i]);
-      }
-    }
-  }
-  frontLeds.show();
-  rearLeds.show();
 }
 
 //////////////////////////////////////////////////////
@@ -166,36 +137,24 @@ void handleState()
 
 void BlinkFunc(Animation *self, int direction, float f)
 {
-  for(int i = 0; i < frontLeds.numPixels(); i++) {
-      frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
-  }
-  
   Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
   for(int l = 0; l < 2; l++) {
     Adafruit_NeoPixel *led = leds[l];
     int yellow = led->Color(255, 255, 0);
     int black = led->Color(0, 0, 0);
-    int white = (l == 0) ? led->Color(255, 255, 255) : led->Color(255, 16, 0);
     
     int beginAtIndex = led->numPixels()/2;
     int litIndex = beginAtIndex + f*direction*led->numPixels()/2;
-    int headlightIndex = shineForward ? led->numPixels()/2 : -2;
     for(int p = 0; p < led->numPixels(); p++) {
-      led->setPixelColor(p, 
-        (p == headlightIndex-1 || (p == headlightIndex+0) || (p == headlightIndex+1)) ? white :
-        (p == litIndex-1 || p == litIndex || p == litIndex+1) ? yellow :
-        black
-       );
+      if(p == litIndex-1 || p == litIndex || p == litIndex+1) {
+        led->setPixelColor(p, yellow);
+      }
     }
   }
 }
 
 void ShineFunc(Animation *self, int _, float t)
 {
-  for(int i = 0; i < frontLeds.numPixels(); i++) {
-    frontLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
-  }
-  
   for(int i = frontLeds.numPixels()/3; i < frontLeds.numPixels()/3*2; i++) {
     int c = (i%2==0)?255:128;
     frontLeds.setPixelColor(i, frontLeds.Color(c, c, c));
