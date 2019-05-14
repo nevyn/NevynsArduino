@@ -1,5 +1,6 @@
 #include <Button.h>
 #include <Adafruit_NeoPixel.h>
+#include "LedStrip.h"
 #include <OverAnimate.h>
 
 //////////////////////////////////////////////////////
@@ -7,6 +8,7 @@
 //////////////////////////////////////////////////////
 static const int numberOfFrontLeds = 44;
 static const int numberOfRearLeds = 28;
+static const int numberOfDashLeds= 5;
 static const int frontPin = 6;
 static const int rearPin = 5;
 // You can also change the pins for the buttons down under `buttonLeft` etc
@@ -22,8 +24,13 @@ static const bool kBlinkerButtonsAreSticky = false;
 
 
 AnimationSystem sys;
-Adafruit_NeoPixel frontLeds = Adafruit_NeoPixel(numberOfFrontLeds, frontPin, NEO_GRB + NEO_KHZ800);
-Adafruit_NeoPixel rearLeds = Adafruit_NeoPixel(numberOfRearLeds, rearPin, NEO_GRB + NEO_KHZ800);
+Adafruit_NeoPixel frontLedStrip = Adafruit_NeoPixel(numberOfFrontLeds + numberOfDashLeds, frontPin, NEO_GRB + NEO_KHZ800);
+LedStrip frontAndDashLeds = LedStrip(&frontLedStrip, 0, numberOfFrontLeds + numberOfDashLeds);
+LedStrip frontLeds = LedStrip(&frontLedStrip, 0, numberOfFrontLeds);
+LedStrip dashLeds = LedStrip(&frontLedStrip, numberOfFrontLeds, numberOfDashLeds);
+
+Adafruit_NeoPixel rearLedStrip = Adafruit_NeoPixel(numberOfRearLeds, rearPin, NEO_GRB + NEO_KHZ800);
+LedStrip rearLeds = LedStrip(&rearLedStrip, 0, numberOfRearLeds);
 
 void BlinkFunc(Animation *self, int direction, float t);
 BoundFunctionAnimation blinkLeft(BlinkFunc, -1);
@@ -33,13 +40,17 @@ BoundFunctionAnimation shine(ShineFunc, 0);
 void BlackFunc(Animation *self, int _, float t);
 BoundFunctionAnimation black(BlackFunc, 0);
 
+void PowerLedFunc(Animation *self, int _, float t);
+BoundFunctionAnimation powerLed(PowerLedFunc, 0);
+
 BoundFunctionAnimation *anims[] = {
   &black,
   &shine,
   &blinkLeft,
-  &blinkRight
+  &blinkRight,
+  &powerLed
 };
-static const int animCount = 4;
+static const int animCount = sizeof(anims)/sizeof(BoundFunctionAnimation*);
 
 
 Button buttonLeft = Button(9, PULLUP); // blink left
@@ -68,10 +79,10 @@ void setup()
     pinMode (i, INPUT_PULLUP);
   }
   
-  frontLeds.begin();
-  frontLeds.show();
-  rearLeds.begin();
-  rearLeds.show();
+  frontLedStrip.begin();
+  frontLedStrip.show();
+  rearLedStrip.begin();
+  rearLedStrip.show();
 
   for(int i = 0; i < animCount; i++) {
     BoundFunctionAnimation *anim = anims[i];
@@ -83,6 +94,8 @@ void setup()
   }
   // this one clears out the background every frame
   black.enabled = true;
+  powerLed.duration = 3.0;
+  powerLed.enabled = true;
   
   // hello!
   bootBlink();
@@ -103,8 +116,8 @@ void loop()
   handleButtons();
   sys.playElapsedTime(delta);
 
-  frontLeds.show();
-  rearLeds.show();
+  frontLedStrip.show();
+  rearLedStrip.show();
 }
 
 //////////////////////////////////////////////////////
@@ -146,11 +159,11 @@ void handleButtons()
 
 void BlinkFunc(Animation *self, int direction, float f)
 {
-  Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
+  LedStrip *leds[] = {&frontLeds, &rearLeds};
   for(int l = 0; l < 2; l++) {
-    Adafruit_NeoPixel *led = leds[l];
-    int yellow = led->Color(255, 255, 0);
-    int black = led->Color(0, 0, 0);
+    LedStrip *led = leds[l];
+    int yellow = Adafruit_NeoPixel::Color(255, 255, 0);
+    int black = Adafruit_NeoPixel::Color(0, 0, 0);
     
     int beginAtIndex = led->numPixels()/2;
     int litIndex = beginAtIndex + f*direction*led->numPixels()/2;
@@ -160,39 +173,50 @@ void BlinkFunc(Animation *self, int direction, float f)
       }
     }
   }
+
+  int c = frontLedStrip.sine8(f*255)/2;
+  dashLeds.setPixelColor((direction == 1) ? 0 : 4, Adafruit_NeoPixel::Color(c, c, 0));
+
 }
 
 void ShineFunc(Animation *self, int _, float t)
 {
-  Adafruit_NeoPixel *leds[] = {&frontLeds, &rearLeds};
+  LedStrip *leds[] = {&frontLeds, &rearLeds};
   for(int l = 0; l < 2; l++) {
-    Adafruit_NeoPixel *led = leds[l];
+    LedStrip *led = leds[l];
     int mid = led->numPixels()/2;
     for(int i = 0; i < led->numPixels(); i++) {
       int distance = abs(mid - i);
       int range = led->numPixels()/4;
-      int strength = clamp((range-distance)*(255/range), 0, 255);
-      led->setPixelColor(i, led->Color(strength, l==0?strength:0, l==0?strength:0));
+      int strength = frontLedStrip.gamma8(clamp((range-distance)*(255/range), 0, 255));
+      led->setPixelColor(i, Adafruit_NeoPixel::Color(strength, l==0?strength:0, l==0?strength:0));
     }
   }
+
+  dashLeds.setPixelColor(2, Adafruit_NeoPixel::Color(0, 0, 1));
 }
 
 void BlackFunc(Animation *self, int _, float t)
 {
-  for(int i = 0; i < frontLeds.numPixels(); i++) {
-    int c = 0; //a(255/frontLeds.numPixels())*i;
-    frontLeds.setPixelColor(i, frontLeds.Color(c, c, c));
+  for(int i = 0; i < frontAndDashLeds.numPixels(); i++) {
+    int c = 0;
+    frontAndDashLeds.setPixelColor(i, Adafruit_NeoPixel::Color(c, c, c));
   }
 
   for(int i = 0; i < rearLeds.numPixels(); i++) {
-    rearLeds.setPixelColor(i, frontLeds.Color(0, 0, 0));
+    rearLeds.setPixelColor(i, Adafruit_NeoPixel::Color(0, 0, 0));
   }
+}
+
+void PowerLedFunc(Animation *self, int _, float t)
+{
+  dashLeds.setPixelColor(1, Adafruit_NeoPixel::Color(2, 0, 0));
 }
 
 void bootBlink()
 {
-  rainbow(&frontLeds, 10);
-  rainbow(&rearLeds, 10);
+  rainbow(&frontLedStrip, 10);
+  rainbow(&rearLedStrip, 10);
 }
 
 void rainbow(Adafruit_NeoPixel *strip, uint8_t wait) {
@@ -218,12 +242,12 @@ void rainbow(Adafruit_NeoPixel *strip, uint8_t wait) {
 uint32_t Wheel(Adafruit_NeoPixel *strip, byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
-    return strip->Color(255 - WheelPos * 3, 0, WheelPos * 3);
+    return Adafruit_NeoPixel::Color(255 - WheelPos * 3, 0, WheelPos * 3);
   }
   if(WheelPos < 170) {
     WheelPos -= 85;
-    return strip->Color(0, WheelPos * 3, 255 - WheelPos * 3);
+    return Adafruit_NeoPixel::Color(0, WheelPos * 3, 255 - WheelPos * 3);
   }
   WheelPos -= 170;
-  return strip->Color(WheelPos * 3, 255 - WheelPos * 3, 0);
+  return Adafruit_NeoPixel::Color(WheelPos * 3, 255 - WheelPos * 3, 0);
 }
