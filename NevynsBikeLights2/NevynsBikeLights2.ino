@@ -6,7 +6,7 @@
 //// Settings
 //////////////////////////////////////////////////////
 static const int numberOfFrontLeds = 44;
-static const int numberOfRearLeds = 8;
+static const int numberOfRearLeds = 28;
 static const int frontPin = 6;
 static const int rearPin = 5;
 // You can also change the pins for the buttons down under `buttonLeft` etc
@@ -170,7 +170,7 @@ void ShineFunc(Animation *self, int _, float t)
     int mid = led->numPixels()/2;
     for(int i = 0; i < led->numPixels(); i++) {
       int distance = abs(mid - i);
-      int range = 10;
+      int range = led->numPixels()/4;
       int strength = clamp((range-distance)*(255/range), 0, 255);
       led->setPixelColor(i, led->Color(strength, l==0?strength:0, l==0?strength:0));
     }
