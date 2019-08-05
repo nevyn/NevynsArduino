@@ -15,13 +15,14 @@ uint8_t *songs[] = {
   smb2_overworld,
   mm3_magnetman,
   iceclimber,
+//  smb2_select,
+  //smb3_die,
 };
 
-  //kirby_dance,
+  //,
   //kirby_plains,
   //mario_1,
-  //smb2_select,
-  //smb3_die,
+
   //smb3_athletic,
   //smb3_overworld,
 
@@ -68,14 +69,15 @@ void clicked() {
   } else {
     playing = 1;
     
-    int new_index = -2;
-    while(new_index != current_song_index) {
+    int new_index = current_song_index;
+    while(new_index == current_song_index) {
       new_index = random(sizeof(songs)/sizeof(*songs));
     }
     current_song_index = new_index;
     Serial.print("Playing ");
     Serial.println(current_song_index);
     cart.play_nes(songs[current_song_index]);
+    playing = 0;
   }
 }
 
