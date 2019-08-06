@@ -15,6 +15,16 @@
 #include <Button.h>
 #include "SPIFFS.h"
 
+extern "C" {
+#include "uzlib/adler32.c"
+#include "uzlib/crc32.c"
+#include "uzlib/genlz77.c"
+#include "uzlib/tinfgzip.c"
+#include "uzlib/tinflate.c"
+#include "uzlib/tinfzlib.c"
+#include "uzlib/defl_static.c"
+}
+
 Cartridge cart(27, 33, 15, 32);
 
 Button buttonShuffle = Button(14, PULLUP);
@@ -25,6 +35,7 @@ int current_song_index = -1;
 
 const int max_song_length = 32*1024;
 const int max_filename_length = 32;
+
 char songs[max_filename_length][64];
 uint8_t currentSong[max_song_length];
 int songCount = 0;
@@ -71,12 +82,14 @@ void check() {
 }
 
 void clicked() {
-   Serial.println("click");
   if ( playing ) {
+    Serial.println("Button pressed: stopping.");
     playing = 0;
     cart.reset_nes();
     delay(100);
   } else {
+    Serial.println("Button pressed: starting.");
+    
     playing = 1;
     
     current_song_index = random(songCount);
@@ -87,13 +100,30 @@ void clicked() {
 
     File f = SPIFFS.open(songs[current_song_index], "r");
     int bytesRead = f.readBytes((char*)currentSong, max_song_length);
+    if(f.available()) {
+      Serial.println("Failed to read entire file, will now crash");
+    }
     f.close();
     
     Serial.print("Loaded ");
     Serial.print(bytesRead);
     Serial.println(" bytes, now playing...");
+
+    //memcpy(currentSong, iceclimber, sizeof(iceclimber));
+    Serial.print("Okay so. currentSong is ");
+    Serial.print(bytesRead);
+    Serial.print(" bytes long, and hard-coded song is ");
+    Serial.print(sizeof(iceclimber));
+    Serial.print(". Comparing first byte: ");
+    Serial.print(currentSong[0]);
+    Serial.print(iceclimber[0]);
+    Serial.print(". Comparing last byte: ");
+    Serial.print(currentSong[bytesRead-1]);
+    Serial.print(iceclimber[sizeof(iceclimber)-1]);
+    
     
     cart.play_nes(currentSong);
+    Serial.println("Song ended, stopping.");
     playing = 0;
   }
 }
