@@ -16,6 +16,7 @@
 #include "SPIFFS.h"
 
 extern "C" {
+#include "uzlib/uzlib.h"
 #include "uzlib/adler32.c"
 #include "uzlib/crc32.c"
 #include "uzlib/genlz77.c"
@@ -33,10 +34,12 @@ Button buttonPlay = Button(15, PULLUP);
 
 int current_song_index = -1;
 
-const int max_song_length = 32*1024;
+const int max_compressed_song_length = 32*1024;
+const int max_song_length = 64*1024;
 const int max_filename_length = 32;
 
 char songs[max_filename_length][64];
+uint8_t currentCompressedSong[max_compressed_song_length];
 uint8_t currentSong[max_song_length];
 int songCount = 0;
 
@@ -46,6 +49,7 @@ void setup()
   dac_output_enable(DAC_CHANNEL_1);
   dac_output_voltage(DAC_CHANNEL_1, 200);
   SPIFFS.begin();
+  uzlib_init();
 
   File songsDir = SPIFFS.open("/");
   File song;
@@ -99,7 +103,7 @@ void clicked() {
     Serial.println(songs[current_song_index]);
 
     File f = SPIFFS.open(songs[current_song_index], "r");
-    int bytesRead = f.readBytes((char*)currentSong, max_song_length);
+    int bytesRead = f.readBytes((char*)currentCompressedSong, max_compressed_song_length);
     if(f.available()) {
       Serial.println("Failed to read entire file, will now crash");
     }
@@ -107,20 +111,33 @@ void clicked() {
     
     Serial.print("Loaded ");
     Serial.print(bytesRead);
-    Serial.println(" bytes, now playing...");
+    Serial.println(" bytes, decompressing...");
 
-    //memcpy(currentSong, iceclimber, sizeof(iceclimber));
-    Serial.print("Okay so. currentSong is ");
-    Serial.print(bytesRead);
-    Serial.print(" bytes long, and hard-coded song is ");
-    Serial.print(sizeof(iceclimber));
-    Serial.print(". Comparing first byte: ");
-    Serial.print(currentSong[0]);
-    Serial.print(iceclimber[0]);
-    Serial.print(". Comparing last byte: ");
-    Serial.print(currentSong[bytesRead-1]);
-    Serial.print(iceclimber[sizeof(iceclimber)-1]);
+    struct uzlib_uncomp d;
+    uzlib_uncompress_init(&d, NULL, 0);
+    d.source = currentCompressedSong;
+    d.source_limit = currentCompressedSong+max_compressed_song_length;
+    d.source_read_cb = NULL;
+  
+    int res = TINF_OK;
+    res = uzlib_gzip_parse_header(&d);
+    if (res != TINF_OK) {
+        Serial.print("Failed to read zlib header");
+    }
     
+    d.dest_start = d.dest = currentSong;
+    d.dest_limit = currentSong+max_song_length;
+
+    res = TINF_OK;
+    while (res == TINF_OK) {
+        res = uzlib_uncompress_chksum(&d);
+    }
+
+    Serial.print("Decompressed ");
+    Serial.print(d.curlen);
+    Serial.print(" bytes (status ");
+    Serial.print(res);
+    Serial.println("), playing...");
     
     cart.play_nes(currentSong);
     Serial.println("Song ended, stopping.");
