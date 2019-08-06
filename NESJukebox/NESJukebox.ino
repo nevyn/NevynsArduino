@@ -35,10 +35,11 @@ Button buttonPlay = Button(15, PULLUP);
 int current_song_index = -1;
 
 const int max_compressed_song_length = 32*1024;
-const int max_song_length = 64*1024;
+const int max_song_length = 74*1024;
 const int max_filename_length = 32;
+const int max_songs = 64;
 
-char songs[max_filename_length][64];
+char songs[max_songs][max_filename_length];
 uint8_t currentCompressedSong[max_compressed_song_length];
 uint8_t currentSong[max_song_length];
 int songCount = 0;
@@ -57,6 +58,10 @@ void setup()
     strncpy(songs[songCount], song.name(), max_filename_length);
     song.close();
     songCount++;
+    if(songCount == max_songs) {
+      break;
+      Serial.println("Max song count reached.");
+    }
   }
   
 
