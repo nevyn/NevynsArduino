@@ -39,9 +39,26 @@ uint8_t currentCompressedSong[max_compressed_song_length];
 uint8_t currentSong[max_song_length];
 int songCount = 0;
 
+void print_wakeup_reason(){
+  esp_sleep_wakeup_cause_t wakeup_reason;
+
+  wakeup_reason = esp_sleep_get_wakeup_cause();
+
+  switch(wakeup_reason)
+  {
+    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
+    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
+    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
+    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
+    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  }
+}
+
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
+  
   dac_output_enable(DAC_CHANNEL_1);
   dac_output_voltage(DAC_CHANNEL_1, 200);
   SPIFFS.begin();
@@ -62,10 +79,16 @@ void setup()
   // set button to use internal pullup so they can be connected between signal pin and GND
   // https://www.arduino.cc/en/Tutorial/InputPullupSerial
   pinMode (14, INPUT_PULLUP);
+
+  print_wakeup_reason();
+  esp_sleep_enable_ext0_wakeup(GPIO_NUM_14, LOW);
   
   cart.init();
   cart.frame_counter_cb(check);
 
+  if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0) {
+    clicked();
+  }
 }
 
 int playing = 0;
@@ -139,6 +162,9 @@ void clicked() {
     cart.play_nes(currentSong);
     Serial.println("Song ended, stopping.");
     playing = 0;
+    delay(200);
+    Serial.println("Going to deep sleep.");
+    esp_deep_sleep_start();
   }
 }
 
