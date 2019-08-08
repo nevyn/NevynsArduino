@@ -12,7 +12,6 @@
 
 #include <Cartridge.h>
 #include <driver/dac.h>
-#include <Button.h>
 #include "SPIFFS.h"
 
 extern "C" {
@@ -27,10 +26,6 @@ extern "C" {
 }
 
 Cartridge cart(27, 33, 15, 32);
-
-Button buttonShuffle = Button(14, PULLUP);
-Button buttonStop = Button(32, PULLUP);
-Button buttonPlay = Button(15, PULLUP);
 
 int current_song_index = -1;
 
@@ -64,12 +59,9 @@ void setup()
     }
   }
   
-
-  // set buttons to use internal pullup so they can be connected between signal pin and GND
+  // set button to use internal pullup so they can be connected between signal pin and GND
   // https://www.arduino.cc/en/Tutorial/InputPullupSerial
   pinMode (14, INPUT_PULLUP);
-  pinMode (32, INPUT_PULLUP);
-  pinMode (15, INPUT_PULLUP);
   
   cart.init();
   cart.frame_counter_cb(check);
