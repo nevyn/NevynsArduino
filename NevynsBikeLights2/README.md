@@ -31,3 +31,27 @@ Voxar's buttons have these wires:
 * green: right (pin 8)
 * brown: front (pin 10)
 * orage: left (pin 7)
+
+### Headers
+
+I'm terrible. This is terrible. Shitty surface solders, glue and duct tape
+is all I was ever taught. Forgive me.
+
+By having a header between the mounting plate for lights+button and the arduino, it's easier
+to deal with each individual component if I need to disassemble or repair later.
+
+![headers](headers.jpg)
+
+2-pin header, bottom-to-top:
+
+1. front light 5v+
+2. front light gnd
+
+6-pin header, bottom-to-top:
+
+1. left button (to pin 7)
+2. right button (to pin 8)
+3. down/stop button (to pin 9)
+4. front/headlight button (to pin 10)
+5. front light signal (to pin 5)
+6. gnd
