@@ -49,8 +49,8 @@ public:
   int currentState;
   unsigned long lastDebounce;
 };
-MediaKey prev(G5,  CONSUMER_CONTROL_SCAN_PREVIOUS),
-         next(G38, CONSUMER_CONTROL_SCAN_NEXT),
+MediaKey prev(G38, CONSUMER_CONTROL_SCAN_PREVIOUS),
+         next(G5,  CONSUMER_CONTROL_SCAN_NEXT),
          play(G39, CONSUMER_CONTROL_PLAY_PAUSE);
 MediaKey *keys[] = {&prev, &next, &play};
 
